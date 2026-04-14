@@ -63,24 +63,19 @@ module.exports = async (req, res) => {
         const commits = payload.commits || [];
         const totalCommits = commits.length;
 
-        // Build commit list (max 3 commits untuk clean view)
+        // Build commit list dengan format simple
         let commitList = '';
-        commits.slice(0, 3).forEach(commit => {
-          const added = commit.added?.length || 0;
-          const removed = commit.removed?.length || 0;
-          const modified = commit.modified?.length || 0;
-          const shortId = commit.id.substring(0, 7);
+        commits.slice(0, 5).forEach(commit => {
+          const shortId = commit.id.substring(0, 6);
           const commitUrl = commit.url || `${repoUrl}/commit/${commit.id}`;
           
-          // Format: [hash] message • +X -Y ~Z
-          const stats = `+${added} -${removed} ~${modified}`;
-          commitList += `[\`${shortId}\`](${commitUrl}) ${commit.message}\n`;
-          commitList += `└ 📊 ${stats}\n\n`;
+          // Format: hash — message
+          commitList += `[\`${shortId}\`](${commitUrl}) — ${commit.message}\n`;
         });
 
         // Tambah info jika ada lebih banyak commits
-        if (totalCommits > 3) {
-          commitList += `*... and ${totalCommits - 3} more commit(s)*`;
+        if (totalCommits > 5) {
+          commitList += `\n*... and ${totalCommits - 5} more commit(s)*`;
         }
 
         embedData = {
