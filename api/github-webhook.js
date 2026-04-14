@@ -80,19 +80,10 @@ module.exports = async (req, res) => {
 
         embedData = {
           embeds: [{
-            author: {
-              name: repo,
-              url: repoUrl,
-              icon_url: 'https://github.githubassets.com/images/modules/logos_page/GitHub-Mark.png'
-            },
             title: `📤 ${totalCommits} commit${totalCommits > 1 ? 's' : ''} pushed to ${branch}`,
             description: commitList.trim(),
             color: 0x238636, // GitHub green
             url: `${repoUrl}/commits/${branch}`,
-            footer: {
-              text: `${repo}`,
-              icon_url: 'https://github.githubassets.com/images/modules/logos_page/GitHub-Mark.png'
-            },
             timestamp: new Date().toISOString()
           }],
           username: 'GitHub',
@@ -131,19 +122,10 @@ module.exports = async (req, res) => {
 
         embedData = {
           embeds: [{
-            author: {
-              name: prRepo,
-              url: prRepoUrl,
-              icon_url: 'https://github.githubassets.com/images/modules/logos_page/GitHub-Mark.png'
-            },
             title: `${prEmoji} Pull Request ${prStatus}`,
             description: prDescription,
             color: prColor,
             url: pr.html_url,
-            footer: {
-              text: prRepo,
-              icon_url: 'https://github.githubassets.com/images/modules/logos_page/GitHub-Mark.png'
-            },
             timestamp: new Date().toISOString()
           }],
           username: 'GitHub',
@@ -167,17 +149,12 @@ module.exports = async (req, res) => {
 
         embedData = {
           embeds: [{
-            author: {
-              name: releaseRepo,
-              url: releaseRepoUrl,
-              icon_url: 'https://github.githubassets.com/images/modules/logos_page/GitHub-Mark.png'
-            },
             title: `🚀 New Release: ${release.tag_name}`,
             description: releaseDescription,
             color: 0x238636, // GitHub green
             url: release.html_url,
             footer: {
-              text: `${releaseRepo} • ${release.prerelease ? 'Pre-release' : 'Release'}`,
+              text: `${release.prerelease ? 'Pre-release' : 'Release'}`,
               icon_url: 'https://github.githubassets.com/images/modules/logos_page/GitHub-Mark.png'
             },
             timestamp: new Date(release.published_at || release.created_at).toISOString()
@@ -224,19 +201,10 @@ module.exports = async (req, res) => {
 
         embedData = {
           embeds: [{
-            author: {
-              name: issueRepo,
-              url: issueRepoUrl,
-              icon_url: 'https://github.githubassets.com/images/modules/logos_page/GitHub-Mark.png'
-            },
             title: `${issueEmoji} Issue ${issueStatus}`,
             description: issueDescription,
             color: issueColor,
             url: issue.html_url,
-            footer: {
-              text: issueRepo,
-              icon_url: 'https://github.githubassets.com/images/modules/logos_page/GitHub-Mark.png'
-            },
             timestamp: new Date().toISOString()
           }],
           username: 'GitHub',
