@@ -59,52 +59,58 @@ module.exports = async (req, res) => {
       case 'push':
         const branch = payload.ref.replace('refs/heads/', '');
         const repo = payload.repository.name;
+        const repoUrl = payload.repository.html_url;
         const commits = payload.commits || [];
+        const totalCommits = commits.length;
 
-        message = `🔄 **Push to ${repo}** (\`${branch}\`)\n`;
-        
-        commits.forEach(commit => {
+        // Discord embed format (lebih rapi dan menarik)
+        const commitFields = commits.slice(0, 5).map(commit => {
+          const added = commit.added?.length || 0;
+          const removed = commit.removed?.length || 0;
+          const modified = commit.modified?.length || 0;
           const shortId = commit.id.substring(0, 7);
-          const time = commit.timestamp 
-            ? new Date(commit.timestamp).toLocaleString('id-ID', { timeZone: 'Asia/Jakarta' })
-            : 'N/A';
+          const commitUrl = commit.url || `${repoUrl}/commit/${commit.id}`;
           
-          message += `\n📝 \`${shortId}\` ${commit.message}`;
-          message += `\n⏰ ${time}`;
+          let statsText = '';
+          if (added > 0) statsText += `**+${added}** `;
+          if (removed > 0) statsText += `**-${removed}** `;
+          if (modified > 0) statsText += `**~${modified}** `;
+          if (!statsText) statsText = 'No changes';
           
-          // Handle optional file stats
-          if (commit.added || commit.removed || commit.modified) {
-            const added = commit.added?.length || 0;
-            const removed = commit.removed?.length || 0;
-            const modified = commit.modified?.length || 0;
-            message += `\n📊 Files: +${added} -${removed} ~${modified}`;
-          }
-          message += `\n`;
+          return {
+            name: `[\`${shortId}\`](${commitUrl}) ${commit.message.substring(0, 60)}${commit.message.length > 60 ? '...' : ''}`,
+            value: `📊 ${statsText}`,
+            inline: false
+          };
         });
 
-        // Discord embed format (lebih rapi)
+        // Tambah info jika ada lebih banyak commits
+        if (totalCommits > 5) {
+          commitFields.push({
+            name: '➕ More commits',
+            value: `... and ${totalCommits - 5} more commit(s)`,
+            inline: false
+          });
+        }
+
         embedData = {
           embeds: [{
-            title: `🔄 Push to ${repo}`,
-            description: `Branch: \`${branch}\``,
-            color: 0x5865F2,
-            fields: commits.map(commit => {
-              const added = commit.added?.length || 0;
-              const removed = commit.removed?.length || 0;
-              const modified = commit.modified?.length || 0;
-              const time = commit.timestamp 
-                ? new Date(commit.timestamp).toLocaleString('id-ID')
-                : 'N/A';
-              
-              return {
-                name: `\`${commit.id.substring(0, 7)}\` ${commit.message}`,
-                value: `⏰ ${time}\n📊 +${added} -${removed} ~${modified}`,
-                inline: false
-              };
-            }),
+            author: {
+              name: `${repo}`,
+              url: repoUrl,
+              icon_url: 'https://github.githubassets.com/images/modules/logos_page/GitHub-Mark.png'
+            },
+            title: `📤 ${totalCommits} new commit${totalCommits > 1 ? 's' : ''} pushed`,
+            description: `**Branch:** [\`${branch}\`](${repoUrl}/tree/${branch})`,
+            color: 0x6E5494, // Purple color for push
+            fields: commitFields,
+            footer: {
+              text: `${repo} • ${branch}`,
+              icon_url: 'https://github.githubassets.com/images/modules/logos_page/GitHub-Mark.png'
+            },
             timestamp: new Date().toISOString()
           }],
-          username: 'GitHub Bot',
+          username: 'GitHub Updates',
           avatar_url: 'https://github.githubassets.com/images/modules/logos_page/GitHub-Mark.png'
         };
 
@@ -116,33 +122,54 @@ module.exports = async (req, res) => {
       case 'pull_request':
         const action = payload.action;
         const pr = payload.pull_request;
+        const prRepo = payload.repository.name;
+        const prRepoUrl = payload.repository.html_url;
 
-        message = `🔀 **Pull Request ${action}**\n`;
-        message += `\n#${pr.number}: ${pr.title}`;
-        message += `\n\`${pr.head.ref}\` → \`${pr.base.ref}\``;
-        message += `\nState: ${pr.state}`;
+        // Warna berdasarkan action
+        let prColor = 0x3FB950; // Green untuk opened
+        let prEmoji = '🟢';
+        if (action === 'closed' && pr.merged) {
+          prColor = 0x8957E5; // Purple untuk merged
+          prEmoji = '🟣';
+        } else if (action === 'closed') {
+          prColor = 0xF85149; // Red untuk closed
+          prEmoji = '🔴';
+        }
 
         embedData = {
           embeds: [{
-            title: `🔀 Pull Request ${action}`,
-            description: `#${pr.number}: ${pr.title}`,
-            color: action === 'opened' ? 0x57F287 : action === 'closed' ? 0xED4245 : 0xFEE75C,
+            author: {
+              name: `${prRepo}`,
+              url: prRepoUrl,
+              icon_url: 'https://github.githubassets.com/images/modules/logos_page/GitHub-Mark.png'
+            },
+            title: `${prEmoji} Pull Request ${action}`,
+            description: `**[#${pr.number}](${pr.html_url})** ${pr.title}`,
+            color: prColor,
             fields: [
               {
-                name: 'Branch',
-                value: `\`${pr.head.ref}\` → \`${pr.base.ref}\``,
+                name: '🔀 Branches',
+                value: `[\`${pr.head.ref}\`](${prRepoUrl}/tree/${pr.head.ref}) → [\`${pr.base.ref}\`](${prRepoUrl}/tree/${pr.base.ref})`,
+                inline: false
+              },
+              {
+                name: '📊 Changes',
+                value: `**+${pr.additions || 0}** additions, **-${pr.deletions || 0}** deletions`,
                 inline: true
               },
               {
-                name: 'State',
-                value: pr.state,
+                name: '📝 Commits',
+                value: `${pr.commits || 0} commit(s)`,
                 inline: true
               }
             ],
-            url: pr.html_url,
+            footer: {
+              text: `${prRepo} • Pull Request #${pr.number}`,
+              icon_url: 'https://github.githubassets.com/images/modules/logos_page/GitHub-Mark.png'
+            },
             timestamp: new Date().toISOString()
           }],
-          username: 'GitHub Bot',
+          username: 'GitHub Updates',
           avatar_url: 'https://github.githubassets.com/images/modules/logos_page/GitHub-Mark.png'
         };
 
@@ -154,27 +181,39 @@ module.exports = async (req, res) => {
 
       case 'release':
         const release = payload.release;
-
-        message = `🚀 **Release ${payload.action}**\n`;
-        message += `\n${release.tag_name}: ${release.name || 'No name'}`;
-        message += `\n\n${release.body || 'No description'}`;
+        const releaseRepo = payload.repository.name;
+        const releaseRepoUrl = payload.repository.html_url;
+        const releaseBody = release.body || 'No release notes provided';
 
         embedData = {
           embeds: [{
-            title: `🚀 Release ${payload.action}`,
-            description: `**${release.tag_name}**: ${release.name || 'No name'}`,
-            color: 0x57F287,
+            author: {
+              name: `${releaseRepo}`,
+              url: releaseRepoUrl,
+              icon_url: 'https://github.githubassets.com/images/modules/logos_page/GitHub-Mark.png'
+            },
+            title: `🚀 New Release: ${release.tag_name}`,
+            description: `**${release.name || release.tag_name}**\n\n${releaseBody.substring(0, 500)}${releaseBody.length > 500 ? '...' : ''}`,
+            color: 0x3FB950, // Green for release
             fields: [
               {
-                name: 'Release Notes',
-                value: (release.body || 'No description').substring(0, 1024), // Discord limit
-                inline: false
+                name: '🏷️ Tag',
+                value: `[\`${release.tag_name}\`](${release.html_url})`,
+                inline: true
+              },
+              {
+                name: '📦 Type',
+                value: release.prerelease ? 'Pre-release' : 'Release',
+                inline: true
               }
             ],
-            url: release.html_url,
-            timestamp: new Date().toISOString()
+            footer: {
+              text: `${releaseRepo} • Release`,
+              icon_url: 'https://github.githubassets.com/images/modules/logos_page/GitHub-Mark.png'
+            },
+            timestamp: new Date(release.published_at || release.created_at).toISOString()
           }],
-          username: 'GitHub Bot',
+          username: 'GitHub Updates',
           avatar_url: 'https://github.githubassets.com/images/modules/logos_page/GitHub-Mark.png'
         };
 
@@ -186,27 +225,54 @@ module.exports = async (req, res) => {
 
       case 'issues':
         const issue = payload.issue;
+        const issueRepo = payload.repository.name;
+        const issueRepoUrl = payload.repository.html_url;
+        const issueAction = payload.action;
 
-        message = `🐛 **Issue ${payload.action}**\n`;
-        message += `\n#${issue.number}: ${issue.title}`;
-        message += `\nState: ${issue.state}`;
+        // Warna dan emoji berdasarkan action
+        let issueColor = 0x3FB950; // Green untuk opened
+        let issueEmoji = '🟢';
+        if (issueAction === 'closed') {
+          issueColor = 0x8957E5; // Purple untuk closed
+          issueEmoji = '🟣';
+        } else if (issueAction === 'reopened') {
+          issueColor = 0xF85149; // Red untuk reopened
+          issueEmoji = '🔴';
+        }
+
+        const issueBody = issue.body || 'No description provided';
 
         embedData = {
           embeds: [{
-            title: `🐛 Issue ${payload.action}`,
-            description: `#${issue.number}: ${issue.title}`,
-            color: payload.action === 'opened' ? 0x57F287 : 0xED4245,
+            author: {
+              name: `${issueRepo}`,
+              url: issueRepoUrl,
+              icon_url: 'https://github.githubassets.com/images/modules/logos_page/GitHub-Mark.png'
+            },
+            title: `${issueEmoji} Issue ${issueAction}`,
+            description: `**[#${issue.number}](${issue.html_url})** ${issue.title}\n\n${issueBody.substring(0, 300)}${issueBody.length > 300 ? '...' : ''}`,
+            color: issueColor,
             fields: [
               {
-                name: 'State',
+                name: '🏷️ Labels',
+                value: issue.labels?.length > 0 
+                  ? issue.labels.map(l => `\`${l.name}\``).join(', ')
+                  : 'No labels',
+                inline: true
+              },
+              {
+                name: '📊 State',
                 value: issue.state,
                 inline: true
               }
             ],
-            url: issue.html_url,
+            footer: {
+              text: `${issueRepo} • Issue #${issue.number}`,
+              icon_url: 'https://github.githubassets.com/images/modules/logos_page/GitHub-Mark.png'
+            },
             timestamp: new Date().toISOString()
           }],
-          username: 'GitHub Bot',
+          username: 'GitHub Updates',
           avatar_url: 'https://github.githubassets.com/images/modules/logos_page/GitHub-Mark.png'
         };
 
