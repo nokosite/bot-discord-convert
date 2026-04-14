@@ -65,13 +65,21 @@ module.exports = async (req, res) => {
         
         commits.forEach(commit => {
           const shortId = commit.id.substring(0, 7);
-          const time = new Date(commit.timestamp).toLocaleString('id-ID', {
-            timeZone: 'Asia/Jakarta'
-          });
+          const time = commit.timestamp 
+            ? new Date(commit.timestamp).toLocaleString('id-ID', { timeZone: 'Asia/Jakarta' })
+            : 'N/A';
           
           message += `\n📝 \`${shortId}\` ${commit.message}`;
           message += `\n⏰ ${time}`;
-          message += `\n📊 Files: +${commit.added.length} -${commit.removed.length} ~${commit.modified.length}\n`;
+          
+          // Handle optional file stats
+          if (commit.added || commit.removed || commit.modified) {
+            const added = commit.added?.length || 0;
+            const removed = commit.removed?.length || 0;
+            const modified = commit.modified?.length || 0;
+            message += `\n📊 Files: +${added} -${removed} ~${modified}`;
+          }
+          message += `\n`;
         });
 
         // Discord embed format (lebih rapi)
@@ -80,11 +88,20 @@ module.exports = async (req, res) => {
             title: `🔄 Push to ${repo}`,
             description: `Branch: \`${branch}\``,
             color: 0x5865F2,
-            fields: commits.map(commit => ({
-              name: `\`${commit.id.substring(0, 7)}\` ${commit.message}`,
-              value: `⏰ ${new Date(commit.timestamp).toLocaleString('id-ID')}\n📊 +${commit.added.length} -${commit.removed.length} ~${commit.modified.length}`,
-              inline: false
-            })),
+            fields: commits.map(commit => {
+              const added = commit.added?.length || 0;
+              const removed = commit.removed?.length || 0;
+              const modified = commit.modified?.length || 0;
+              const time = commit.timestamp 
+                ? new Date(commit.timestamp).toLocaleString('id-ID')
+                : 'N/A';
+              
+              return {
+                name: `\`${commit.id.substring(0, 7)}\` ${commit.message}`,
+                value: `⏰ ${time}\n📊 +${added} -${removed} ~${modified}`,
+                inline: false
+              };
+            }),
             timestamp: new Date().toISOString()
           }],
           username: 'GitHub Bot',

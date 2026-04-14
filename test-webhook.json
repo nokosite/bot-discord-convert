@@ -1,0 +1,19 @@
+{
+  "repository": {
+    "name": "bot-discord-convert",
+    "full_name": "nokosite/bot-discord-convert",
+    "html_url": "https://github.com/nokosite/bot-discord-convert"
+  },
+  "ref": "refs/heads/main",
+  "commits": [
+    {
+      "id": "abc123def456",
+      "message": "Test webhook integration - Initial setup",
+      "url": "https://github.com/nokosite/bot-discord-convert/commit/abc123def456"
+    }
+  ],
+  "head_commit": {
+    "id": "abc123def456",
+    "message": "Test webhook integration - Initial setup"
+  }
+}
