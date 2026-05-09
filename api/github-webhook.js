@@ -62,15 +62,17 @@ module.exports = async (req, res) => {
         const repoUrl = payload.repository.html_url;
         const commits = payload.commits || [];
         const totalCommits = commits.length;
+        const pusher = payload.pusher?.name || payload.sender?.login || 'Unknown';
 
         // Build commit list dengan format simple
         let commitList = '';
         commits.slice(0, 5).forEach(commit => {
           const shortId = commit.id.substring(0, 6);
           const commitUrl = commit.url || `${repoUrl}/commit/${commit.id}`;
-          
-          // Format: hash — message
-          commitList += `[\`${shortId}\`](${commitUrl}) — ${commit.message}\n`;
+          const author = commit.author?.name || commit.author?.username || 'Unknown';
+
+          // Format: hash — message (by author)
+          commitList += `[\`${shortId}\`](${commitUrl}) — ${commit.message} *by ${author}*\n`;
         });
 
         // Tambah info jika ada lebih banyak commits
@@ -80,7 +82,7 @@ module.exports = async (req, res) => {
 
         embedData = {
           embeds: [{
-            title: `📤 ${totalCommits} commit${totalCommits > 1 ? 's' : ''} pushed to ${branch}`,
+            title: `📤 ${totalCommits} commit${totalCommits > 1 ? 's' : ''} pushed to ${branch} by ${pusher}`,
             description: commitList.trim(),
             color: 0x238636, // GitHub green
             url: `${repoUrl}/commits/${branch}`,
